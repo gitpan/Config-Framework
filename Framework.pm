@@ -20,7 +20,7 @@
  
 ## Class Global Values ############################ 
 our @ISA = qw(Exporter);
-our $VERSION = '2.3';
+our $VERSION = '2.4';
 our $errstr = ();
 our @EXPORT_OK = ($VERSION, $errstr);
 our @temp = split (/\//,$0);
@@ -389,7 +389,7 @@ sub AlertAdmin {
 ## NOTE: need to build syslog support into this
 ## eventually
 sub Log {
-	my ($self, %p);
+	my ($self, %p) = @_;
 	
 	#Message is required
 	exists($p{'Message'}) || do {
@@ -405,7 +405,7 @@ sub Log {
 	
 	#append it to the log file
 	open (LOG, ">>$self->{'v_root'}/$p{'Log'}") || do {
-		$errstr = "Log: can't open log file ($p{'Log'}: $!\n";
+		$self->{'errstr'} = "Log: can't open log file ($p{'Log'}: $!\n";
 		return (undef);
 	};
 	my $time = time();

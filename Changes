@@ -1,5 +1,9 @@
 Revision history for Perl extension Config::Framework.
 
+2.4		Thu Oct  9 19:04:13 GMT 2003
+		fixed typo bug in Log... now we get an object AND args! ;-)
+		fixed typo bug in Log, causing error string to be reported incorrectly.
+
 2.3		Mon Oct  6 17:25:26 EDT 2003
 		fixed LoadConfig and WriteConfig to search propper paths
 
