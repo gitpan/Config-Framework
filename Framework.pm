@@ -13,13 +13,14 @@
   use Carp;
   
   use Data::DumpXML;
+  use Data::DumpXML::Parser;
 
   require Exporter;
   use AutoLoader qw(AUTOLOAD);
  
 ## Class Global Values ############################ 
 our @ISA = qw(Exporter);
-our $VERSION = '2.1';
+our $VERSION = '2.2';
 our $errstr = ();
 our @EXPORT_OK = ($VERSION, $errstr);
 our @temp = split (/\//,$0);
@@ -91,10 +92,23 @@ sub new {
 	
 	#load the secure config, if directed
 	if ($self->{'GetSecure'}){
-		$self->LoadConfig(File => "$self->{'v_root'}/$self->{'config_loc'}/passwds.xml") || do {
+		$self->LoadConfig(
+			File 			=> "$self->{'v_root'}/$self->{'config_loc'}/passwds.xml",
+			configNamespace	=> "Secure"
+		) || do {
 			$errstr = "new: can't load secure config: $self->{'errstr'}";
 			return (undef);
 		};
+	}
+	
+	#weed out descriptors under Secure namespace
+	#ugly hack
+	foreach (keys %{$self->{'Secure'}}){
+		if (ref ($self->{'Secure'}->{$_}) eq "HASH"){
+			if (exists($self->{'Secure'}->{$_}->{'content'})){
+				$self->{'Secure'}->{$_} = $self->{'Secure'}->{$_}->{'content'};
+			}
+		}
 	}
 	
 	#send back the constructed object
