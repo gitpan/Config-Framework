@@ -42,3 +42,6 @@ Changed namespace to Config::Framework.
 1.02	New becomes new. **slaps head** ;-)
 1.03	Thu Jan 2 14:46:07 2003
 		added WriteConfig
+1.04	Tue, Mar 18 17:30:00 2003
+		last_resort.log is now written to v_root/var/log, also writes reason sendmail could
+		not be opened

@@ -17,7 +17,7 @@
  
 ## Class Global Values ############################ 
   our @ISA = qw(Exporter);
-  our $VERSION = '1.03';
+  our $VERSION = '1.04';
   our $errstr = ();
   our @EXPORT_OK = ($VERSION, $errstr);
   our @temp = split (/\//,$0);
@@ -355,8 +355,8 @@ sub AlertAdmin {
         #can't open sendmail! send message to v_root/var/last_resort.log
          $p{Message}=~s/\"/\\\"/g;
          my $time = time();
-         system ("echo \"[$time]: CAN'T OPEN SENDMAIL! -> $p{Message}\" >> $self->{v_root}/var/last_resort.log");
-         $self->{errstr} = "[$time]: CAN'T OPEN SENDMAIL! -> $p{Message}";
+         system ("echo \"[$time]: CAN'T OPEN SENDMAIL! ($!) -> $p{Message}\" >> $self->{v_root}/var/log/last_resort.log");
+         $self->{errstr} = "[$time]: CAN'T OPEN SENDMAIL! ($!) -> $p{Message}";
          return (undef);
     };
    #message content
