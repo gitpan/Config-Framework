@@ -43,6 +43,7 @@ close (conf);
 WriteMakefile(
     'NAME'			=> 'Config::Framework',
     'VERSION_FROM'	=> 'Framework.pm',
+    'ABSTRACT_FROM'	=> 'Framework.pod',
     'AUTHOR'		=> 'Andrew N. Hicox  <andrew@hicox.com>',
     'PREREQ_PM'		=> {
         Crypt::CBC				=> 2.02,

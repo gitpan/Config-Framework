@@ -1,4 +1,6 @@
-=head1	Config::Framework
+=head1	NAME
+
+Config::Framework - Provides a comfiguration framework for your perl applications.
 
 This module provides global configuration data to perl programs which live under a 
 standard distribution. For more information on the standard, perldoc or man 'manifesto'.

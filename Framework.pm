@@ -17,7 +17,7 @@
  
 ## Class Global Values ############################ 
   our @ISA = qw(Exporter);
-  our $VERSION = '1.01';
+  our $VERSION = '1.02';
   our $errstr = ();
   our @EXPORT_OK = ($VERSION, $errstr);
   our @temp = split (/\//,$0);
@@ -52,8 +52,8 @@
      'Key'				=> "<pop>Key</pop>"
  );
 
-## New ############################################
-sub New {
+## new ############################################
+sub new {
     #local vars
      my %p = @_;
      my ($obj) = bless (\%GLOB_CONFIG);

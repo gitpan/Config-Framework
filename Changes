@@ -39,3 +39,4 @@ Changed namespace to Config::Framework.
 		initial version for release to CPAN under Config::Framework namespace.
 1.01		Mon Oct 21 12:48:00 2002
 		fixed typo in AlertAdmin
+1.02	New becomes new. **slaps head** ;-)
