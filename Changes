@@ -1,5 +1,8 @@
 Revision history for Perl extension Config::Framework.
 
+2.5		Mon Oct 20 17:20:49 EDT 2003
+		fixed default address bug in AlertAdmin
+
 2.4		Thu Oct  9 19:04:13 GMT 2003
 		fixed typo bug in Log... now we get an object AND args! ;-)
 		fixed typo bug in Log, causing error string to be reported incorrectly.

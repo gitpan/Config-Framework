@@ -20,7 +20,7 @@
  
 ## Class Global Values ############################ 
 our @ISA = qw(Exporter);
-our $VERSION = '2.4';
+our $VERSION = '2.5';
 our $errstr = ();
 our @EXPORT_OK = ($VERSION, $errstr);
 our @temp = split (/\//,$0);
@@ -331,12 +331,17 @@ sub AlertAdmin {
 		return (undef);
 	};
 	
+	#default 'To' is the admin
+	exists($p{'To'}) || do {
+		push (@{$p{'To'}}, $self->{'admin'});
+	};
+	
 	#fix stringy 'To''s to work with arrayified ones
 	if ((exists($p{'To'})) && (ref($p{'To'}) ne "ARRAY")){
 		my $temp = $p{'To'};
 		delete($p{'To'});
 		push(@{$p{'To'}}, $temp);
-	};
+	}
 	
 	#if we're in debug mode, just print the message to stdout and be done
 	if ($self->{'debug'}){
