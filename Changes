@@ -40,3 +40,5 @@ Changed namespace to Config::Framework.
 1.01		Mon Oct 21 12:48:00 2002
 		fixed typo in AlertAdmin
 1.02	New becomes new. **slaps head** ;-)
+1.03	Thu Jan 2 14:46:07 2003
+		added WriteConfig

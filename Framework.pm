@@ -17,7 +17,7 @@
  
 ## Class Global Values ############################ 
   our @ISA = qw(Exporter);
-  our $VERSION = '1.02';
+  our $VERSION = '1.03';
   our $errstr = ();
   our @EXPORT_OK = ($VERSION, $errstr);
   our @temp = split (/\//,$0);
@@ -199,7 +199,7 @@ sub LoadConfig {
     #local vars
      my $self = shift();
      my %p = @_;
-     my ($data) = ();
+     my ($data, $namespace) = ();
     #required option
      unless (exists ($p{File})){
          $self->{errstr} = "File is a required option to LoadConfig";
@@ -216,9 +216,11 @@ sub LoadConfig {
          if (exists($data->{configNamespace})){
             #export under parent namespace
              $self->{$p{configNamespace}}->{$data->{configNamespace}} = $data;
+             $namespace = "$p{configNamespace}/$data->{configNamespace}";
          }else{
             #export under user-defined namespace
              $self->{$p{configNamespace}} = $data;
+             $namespace = $p{configNamespace};
          }
      }else{
         #no user defined configNamespace, export under own namespace, if it exists
@@ -227,8 +229,44 @@ sub LoadConfig {
              return (undef);
          }
          $self->{$data->{configNamespace}} = $data;
+         $namespace = $data->{configNamespace};
      }
+    #keep file in map for WriteConfig
+     $self->{'_ConfigMap'}->{$namespace}->{$p{'File'}};
      return (1);
+}
+
+
+## WriteConfig ####################################
+# store values under a given namespace to a file.
+sub WriteConfig {
+   #local vars
+    my ($self, %p) = @_;
+   #sanity chacks
+    unless (exists($self->{$p{'configNamespace'}})){
+        $self->{'errstr'} = "WriteConfig: specified configNamespace does not exist in this object!";
+        return (undef);
+    }
+   #dump given namespace down to xml
+    require Data::DumpXML::dump_xml;
+    my $xml_data = Data::DumpXML::dump_xml($self->{$p{'configNamespace'}});
+   #if no 'File' argument is given, attempt to determine the file from which this configNamespace
+   #originated and use that
+    unless (exists($p{'File'})){ $p{'File'} = $self->{'_ConfigMap'}->{$p{'configNamespace'}}; }
+   #is there an alt location?
+    if ($p{AltLoc}){
+        $p{File} = "$p{AltLoc}/$p{File}";
+    }else{
+        $p{File} = "$self->{v_root}/$self->{config_loc}/$p{File}";
+    }
+   #open and dump
+    open (OUTFILE, ">$p{File}") || do {
+        $self->{'errstr'} = "WriteConfig: failed to open $p{File} in write mode";
+        return (undef);
+    };
+    print OUTFILE $xml_data, "\n";
+    close OUTFILE;
+    return (1);
 }
 
 ## LoadUserCfg ####################################
