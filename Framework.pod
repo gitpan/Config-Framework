@@ -477,10 +477,6 @@ The path and filename of the file to log the message to.
 =head1 Author: 
 
  Andrew N. Hicox	<ahicox@uu.net>
- WorldCom Customer Security Development Group
+ http://www.hicox.com
 
-=head1 Author: 
-
- Andrew N. Hicox	<ahicox@uu.net>
- WorldCom Customer Security Development Group
 

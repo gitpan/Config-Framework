@@ -37,3 +37,5 @@ Changed namespace to Config::Framework.
 
 1.0		Mon Oct 21 11:13:14 2002
 		initial version for release to CPAN under Config::Framework namespace.
+1.01		Mon Oct 21 12:48:00 2002
+		fixed typo in AlertAdmin

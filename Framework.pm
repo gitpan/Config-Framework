@@ -17,7 +17,7 @@
  
 ## Class Global Values ############################ 
   our @ISA = qw(Exporter);
-  our $VERSION = '1.0';
+  our $VERSION = '1.01';
   our $errstr = ();
   our @EXPORT_OK = ($VERSION, $errstr);
   our @temp = split (/\//,$0);
@@ -322,11 +322,11 @@ sub AlertAdmin {
          return (undef);
     };
    #message content
-    print SENDMAIL "From: nobody\@uu.net ($self->{program})\n";
+    print SENDMAIL "From: nobody ($self->{program})\n";
     print SENDMAIL "To: $to\n";
     print SENDMAIL "Subject: Auto-generated Alert from: $self->{program}\n";
-    print SENDMAIL "Reply-To: nobody\@uu.net\n";
-    print SENDMAIL "Errors-To: nobody\@uu.net\n\n";
+    print SENDMAIL "Reply-To: nobody\n";
+    print SENDMAIL "Errors-To: nobody\n\n";
     print SENDMAIL "\n\n";
     print SENDMAIL $p{Message}, "\n";
     if ($p{ENV}){
