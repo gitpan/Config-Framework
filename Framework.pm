@@ -20,7 +20,7 @@
  
 ## Class Global Values ############################ 
 our @ISA = qw(Exporter);
-our $VERSION = '2.2';
+our $VERSION = '2.3';
 our $errstr = ();
 our @EXPORT_OK = ($VERSION, $errstr);
 our @temp = split (/\//,$0);
@@ -87,6 +87,7 @@ sub new {
 		$self->LoadConfig(File => $_) || do {
 			$errstr = "new: ";
 			$errstr.= $self->{'errstr'};
+			return (undef);
 		};
 	}
 	
@@ -194,8 +195,8 @@ sub LoadConfig {
 	#find the file
 	(-e $p{'File'}) || do {
 		#if it exists under config_loc use that
-		if (-e "$self->{'config_loc'}/$p{'File'}"){
-			$p{'File'} = "$self->{'config_loc'}/$p{'File'}";
+		if (-e "$self->{'v_root'}/$self->{'config_loc'}/$p{'File'}"){
+			$p{'File'} = "$self->{'v_root'}/$self->{'config_loc'}/$p{'File'}";
 		#otherwise if it exists under the FrameworkDir, use that
 		}elsif (-e "$self->{'FrameworkDir'}/$p{'File'}"){
 			$p{'File'} = "$self->{'FrameworkDir'}/$p{'File'}";
@@ -286,8 +287,8 @@ sub WriteConfig {
 	#find the file
 	(-w $p{'File'}) || do {
 		#if it exists under config_loc use that
-		if (-w "$self->{'config_loc'}/$p{'File'}"){
-			$p{'File'} = "$self->{'config_loc'}/$p{'File'}";
+		if (-w "$self->{'v_root'}/$self->{'config_loc'}/$p{'File'}"){
+			$p{'File'} = "$self->{'v_root'}/ $self->{'config_loc'}/$p{'File'}";
 		#otherwise if it exists under the FrameworkDir, use that
 		}elsif (-w "$self->{'FrameworkDir'}/$p{'File'}"){
 			$p{'File'} = "$self->{'FrameworkDir'}/$p{'File'}";

@@ -1,5 +1,8 @@
 Revision history for Perl extension Config::Framework.
 
+2.3		Mon Oct  6 17:25:26 EDT 2003
+		fixed LoadConfig and WriteConfig to search propper paths
+
 2.1		Tue Sep 30 12:05:28 EDT 2003
 		fixed bug with exported methods in Data::DumpXML.
 
