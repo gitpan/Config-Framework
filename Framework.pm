@@ -16,113 +16,89 @@
   use AutoLoader qw(AUTOLOAD);
  
 ## Class Global Values ############################ 
-  our @ISA = qw(Exporter);
-  our $VERSION = '1.05';
-  our $errstr = ();
-  our @EXPORT_OK = ($VERSION, $errstr);
-  our @temp = split (/\//,$0);
-  our %GLOB_CONFIG = (
-    #name of program running this code
-     'program'		=> $temp[$#temp],
-    #virtual root: everything lives under this
-     'v_root'			=> "<pop>v_root</pop>",
-    #global configuration files live in this subdirectory
-     'config_loc'		=> "<pop>config_loc</pop>",
-    #sybase home directory
-     'SYBASE'			=> "<pop>SYBASE</pop>",
-    #oracle home directory
-     'ORACLE_HOME'		=> "<pop>ORACLE_HOME</pop>",
-    #set this library path
-     'LD_LIBRARY_PATH'	=> "<pop>LD_LIBRARY_PATH</pop>",
-    #where sendmail resides
-     'sendmail'			=> "<pop>sendmail</pop>",
-    #someone to phone home to when things go really wrong
-     'admin'			=> "<pop>admin</pop>",
-    #export these keys from GLOB_CONFIG to the shell environment
-     'EnvExportList'	=> [
-         "SYBASE",
-         "ORACLE_HOME",
-         "ORACLE_SID",
-         "ARTCPPORT",
-         "LD_LIBRARY_PATH"
-     ],
-    #we're using this encryption module
-     'Crypt'			=> "<pop>Crypt</pop>",
-    #it's under the virtual doormat
-     'Key'				=> "<pop>Key</pop>"
+our @ISA = qw(Exporter);
+our $VERSION = '2.0';
+our $errstr = ();
+our @EXPORT_OK = ($VERSION, $errstr);
+our @temp = split (/\//,$0);
+our %GLOB_CONFIG = (
+	#name of program running this code
+	'program'		=> $temp[$#temp],
+	#virtual root: everything lives under this
+	'v_root'			=> "<pop>v_root</pop>",
+	#global configuration files live in this subdirectory
+	'config_loc'		=> "<pop>config_loc</pop>",
+	#sybase home directory
+	'SYBASE'			=> "<pop>SYBASE</pop>",
+	#oracle home directory
+	'ORACLE_HOME'		=> "<pop>ORACLE_HOME</pop>",
+	#set this library path
+	'LD_LIBRARY_PATH'	=> "<pop>LD_LIBRARY_PATH</pop>",
+	#where sendmail resides
+	'sendmail'			=> "<pop>sendmail</pop>",
+	#someone to phone home to when things go really wrong
+	'admin'				=> "<pop>admin</pop>",
+	#export these keys from GLOB_CONFIG to the shell environment
+	'EnvExportList'		=> [
+		"SYBASE",
+		"ORACLE_HOME",
+		"ORACLE_SID",
+		"ARTCPPORT",
+		"LD_LIBRARY_PATH"
+	],
+	#we're using this encryption module
+	'Crypt'				=> "<pop>Crypt</pop>",
+	#it's under the virtual doormat
+	'Key'				=> "<pop>Key</pop>",
+	#automatically load child configs
+	'LoadChildren'		=> 1
  );
+
 
 ## new ############################################
 sub new {
-    #local vars
-     my %p = @_;
-     my ($obj) = bless (\%GLOB_CONFIG);
-    #if there's anything new that needs to be exported
-     if ((exists($p{EnvExportList})) && (ref ($p{EnvExportList}) eq "ARRAY")){
-         foreach (@{$p{EnvExportList}}){
-             push (@{$obj->{EnvExportList}}, $_);
-         }
-         delete ($p{EnvExportList});
-     }
-    #do the exports, unless EnvExportOverride is set! ;-)
-     unless ($p{EnvExportOverride}){
-         foreach (@{$obj->{EnvExportList}}){
-             if (exists($GLOB_CONFIG{$_})){
-                 $main::ENV{$_} = $GLOB_CONFIG{$_};
-             }
-         }
-     }
-    #default states
-     unless (exists $p{AutoLoadUserCfg}){ $p{AutoLoadUserCfg} = 1; }
-    #insert options into main object
-     foreach (keys %p){ $obj->{$_} = $p{$_}; }
-    #if GetSecure is set, load secure data also
-     if ($obj->{GetSecure}){
-         unless ($obj->LoadConfig(
-             File				=> "passwds.xml",
-             configNamespace	=> "Secure"
-         )){
-             $errstr = "Object Initialization (loading secure): $obj->{errstr}";
-             return (undef);
-         }
-        #weed out the descriptions
-         foreach (keys %{$obj->{Secure}}){ $obj->{Secure}->{$_} = $obj->{Secure}->{$_}->{content}; }
-         delete ($obj->{GetSecure});
-     }
-    #if a file (or files) is specified, load it (them) too
-     if (exists($p{File})){
-         unless (ref($p{File}) eq "ARRAY"){ my $temp = $p{File}; delete ($p{File}); push (@{$p{File}},$temp); }
-     }
-     foreach (@{$p{File}}){
-         my $data = ();
-         unless ($data = $obj->LoadXMLConfig(File => $_)){
-             $errstr = "Object Initialization: can't load specified config: $obj->{errstr}";
-             return (undef);
-         }
-        #must define configNamespace
-         unless ( exists ($data->{configNamespace})){
-             $errstr = "Object Initialization: specified config does not define configNamespace!";
-             return (undef);
-         }
-        #make a shortcut to the ApplicationFramework
-         $data->{FrameworkDir} = "$obj->{v_root}/$obj->{config_loc}/ApplicationFrameworks/$data->{'Program Name'}";
-        #stash it in the object
-         $obj->{$data->{configNamespace}} = $data;
-        #if defined (and ok) load userconfig
-         if ((exists($data->{'User Config'})) && ($obj->{AutoLoadUserCfg})){
-             unless ($obj->LoadUserCfg(
-                 configNamespace	=> $data->{configNamespace}
-             )){
-                 $errstr = "Object Initialization (load user config): $obj->{errstr}";
-                 return (undef);
-             }
-         }
-     }
-    #File option dosen't belong in the object
-     delete ($obj->{File});
-    #send back da object
-     return ($obj);
+	my $class = shift();
+	my $self = bless ({@_}, $class);
+	
+	#insert default global config items unless overriden by user input
+	foreach (keys %GLOB_CONFIG){ $self->{$_} = $GLOB_CONFIG{$_} unless exists($self->{$_}); }
+	
+	#export items in EnvExportList
+	foreach (@{$self->{'EnvExportList'}}){ $main::ENV{$_} = $self->{$_} if exists($self->{$_}); }
+	
+	#export other user-defined export items
+	foreach (keys %{$self->{'Export'}}){ $main::ENV{$_} = $self->{'Export'}->{$_}; }
+	
+	#set up a shortcut to the applications 'framework' directory
+	$self->{'FrameworkDir'} = "$self->{'v_root'}/$self->{'config_loc'}/ApplicationFrameworks/$self->{'program'}";
+	
+	#fix string-specified files for multiple file compatibility
+	if ((exists ($self->{'File'})) && (ref ($self->{'File'}) ne "ARRAY")){
+		my $temp = $self->{'File'};
+		delete($self->{'File'});
+		push (@{$self->{'File'}}, $temp);
+	}
+	
+	#load all of the specified configs
+	foreach (@{$self->{'File'}}){
+		$self->LoadConfig(File => $_) || do {
+			$errstr = "new: ";
+			$errstr.= $self->{'errstr'};
+		};
+	}
+	
+	#load the secure config, if directed
+	if ($self->{'GetSecure'}){
+		$self->LoadConfig(File => "$self->{'v_root'}/$self->{'config_loc'}/passwds.xml") || do {
+			$errstr = "new: can't load secure config: $self->{'errstr'}";
+			return (undef);
+		};
+	}
+	
+	#send back the constructed object
+	return ($self);
 }
+
 
 
 ## True for perl include ##########################
@@ -132,60 +108,56 @@ __END__
 
 ## LoadXMLConfig ##################################
 sub LoadXMLConfig {
-    #local vars
-     my $self = shift();
-     my %p = @_;
-    #required option
-     unless (exists ($p{File})){
-         $self->{errstr} = "File is a required option to LoadXMLConfig";
-         return (undef);
-     }
-    #is there an alt location?
-     if ($p{AltLoc}){
-         $p{File} = "$p{AltLoc}/$p{File}";
-     }else{
-         $p{File} = "$self->{v_root}/$self->{config_loc}/$p{File}";
-     }
-    #does the specified file exist?
-     if (! -e $p{File}){
-         $self->{errstr} = "specified file does not exist: $p{File}";
-         return (undef);
-     }
-    #open the file
-     open (INFILE,"$p{File}") || do {
-         $self->{errstr} = "can't open XML config ($p{File})! $!";
+	my ($self, %p) = @_;
+	
+	#File is a required option
+	exists($p{'File'}) || do {
+		$self->{'errstr'} = "LoadXMLConfig: 'File' is a required option";
+		return (undef);
+	};
+	
+	#check that the specified file exists
+	(-e $p{'File'}) || do {
+		$self->{'errstr'} = "LoadXMLConfig: specified file ($p{'File'}) does not exist";
+		return (undef);
+	};
+	
+	#open da file
+	open (INFILE,"$p{File}") || do {
+         $self->{'errstr'} = "LoadXMLConfig: can't open specified file ($p{'File'}) / $!";
          return (undef);
      };
+     
+     #flatten it into a big 'ol string
      my $data = join ('',<INFILE>);
+     
+     #at this point we're done with the filehandle
      close (INFILE);
-    #if it's a binary file, we'll presume it's encrypted
-     if (-B $p{File}){
-        #local stuff
-         my ($Key,$Crypt);
-        #use global Key and Crypt unless otherwise specified
-         if (exists $p{Key}){ $Key = $p{Key}; }else{ $Key = $self->{Key}; }
-         if (exists $p{Crypt}){ $Crypt = $p{Crypt}; }else{ $Crypt = $self->{Crypt}; }
-        #get cipher, unless we have one already (and it's the same)
-         unless (
-             (exists($self->{Cipher})) &&
-             ($Key == $self->{Key})   &&
-             ($Crypt == $self->{Crypt})
-         ){
-             require Crypt::CBC;
-             $self->{Cipher} = new Crypt::CBC($self->{Key},$self->{Crypt});
-         }
-        #decrypt the data
-         $data = $self->{Cipher}->decrypt($data);
-     }
-    #get an XML parser, unless we have one already
-     unless (exists($self->{XMLParser})){
-        #if we've got here, than it isn't loaded yet
-         require Data::DumpXML::Parser;
-         $self->{XMLParser} = Data::DumpXML::Parser->new;
-     }
-    #parse xml
-     my $info = $self->{XMLParser}->parsestring($data);
-    #if there's only one element just return it
+     
+     #if the file type was binary, we can presume it's encrypted
+     if (-B $p{'File'}){
+     	#use global key and crypt unless otherwise specified
+		foreach ('Key','Crypt'){ $p{$_} = $self->{$_} unless exists($p{$_}); }
+		#get the cipher
+		require Crypt::CBC;
+		my $cipher = new Crypt::CBC($p{'Key'},$p{'Crypt'});
+		#decrypt the data
+		$data = $cipher->decrypt($data);
+	}
+	
+	#get a Data::DumpXML::Parser parser object unless we have one already
+	exists($self->{'DDXMLParser'}) || do {
+		require Data::DumpXML::Parser;
+		$self->{'DDXMLParser'} = Data::DumpXML::Parser->new;
+	};
+	
+	#parse it
+	my $info = $self->{'DDXMLParser'}->parsestring($data) || do {
+		$self->{'errstr'} = "LoadXMLConfig: failed to parse XML data from $p{'File'} / $!";
+		return (undef);
+	};
+	
+	#if there's only one element just return it
      if ($#{$info} == 0){
          return ($info->[0]);
      }else{
@@ -196,207 +168,242 @@ sub LoadXMLConfig {
 
 ## LoadConfig #####################################
 sub LoadConfig {
-    #local vars
-     my $self = shift();
-     my %p = @_;
-     my ($data, $namespace) = ();
-    #required option
-     unless (exists ($p{File})){
-         $self->{errstr} = "File is a required option to LoadConfig";
-         return (undef);
-     }
-    
-    #well try it!
-     unless ($data = $self->LoadXMLConfig(%p)){
-         $self->{errstr} = "LoadConfig can't load specified config: $self->{errstr}";
-         return (undef);
-     }
-    #is there a user-defined configNamespace?
-     if (exists($p{configNamespace})){
-         if (exists($data->{configNamespace})){
-            #export under parent namespace
-             $self->{$p{configNamespace}}->{$data->{configNamespace}} = $data;
-             $namespace = "$p{configNamespace}/$data->{configNamespace}";
-         }else{
-            #export under user-defined namespace
-             $self->{$p{configNamespace}} = $data;
-             $namespace = $p{configNamespace};
-         }
-     }else{
-        #no user defined configNamespace, export under own namespace, if it exists
-         unless (exists($data->{configNamespace})){
-             $self->{errstr} = "LoadConfig: specified config does not define configNamespace!";
-             return (undef);
-         }
-         $self->{$data->{configNamespace}} = $data;
-         $namespace = $data->{configNamespace};
-     }
-    #keep file in map for WriteConfig
-     $self->{'_ConfigMap'}->{$namespace}->{$p{'File'}};
-     return (1);
+	my ($self, %p) = @_;
+	
+	#File is a required option
+	exists($p{'File'}) || do {
+		$self->{'errstr'} = "LoadConfig: 'File' is a required option";
+		return (undef);
+	};
+	
+	#find the file
+	(-e $p{'File'}) || do {
+		#if it exists under config_loc use that
+		if (-e "$self->{'config_loc'}/$p{'File'}"){
+			$p{'File'} = "$self->{'config_loc'}/$p{'File'}";
+		#otherwise if it exists under the FrameworkDir, use that
+		}elsif (-e "$self->{'FrameworkDir'}/$p{'File'}"){
+			$p{'File'} = "$self->{'FrameworkDir'}/$p{'File'}";
+		#other-otherwise if it exists in the user's home directory, use that
+		}elsif (-e "$ENV{'HOME'}/$p{'File'}"){
+			$p{'File'} = "$ENV{'HOME'}/$p{'File'}";
+		#else there's a problem
+		}else{
+			$self->{'errstr'} = "LoadConfig: can't find the file $p{'File'}";
+			return (undef);
+		}
+	};
+	
+	#load it up
+	my $data = $self->LoadXMLConfig(%p) || do {
+		$self->{'errstr'} = "LoadConfig: $self->{'errstr'}";
+		return (undef);
+	};
+	
+	#if the file dosen't define a config namespace ...
+	exists($data->{'configNamespace'}) || do {
+		#if there is a user-defined namespace, use that
+		if (exists($p{'configNamespace'})){
+			$data->{'configNamespace'} = $p{'configNamespace'};
+		}else{
+			$self->{'errstr'} = "LoadConfig: $p{'File'} does not define a 'configNamespace', and none has been ";
+			$self->{'errstr'}.= "specified with this function call. I don't know where to put this data!";
+			return (undef);
+		}
+	};
+	
+	#if theres a parent namespace specified, put it under there
+	#otherwise stash it in the object under it's own namespace
+	if (exists($p{'Parent'})){
+		$self->{$p{'Parent'}}->{$data->{'configNamespace'}} = $data;
+	}else{
+		$self->{$data->{'configNamespace'}} = $data;
+	}
+	
+	#keep a map so that WriteConfig can write by namespace instead of filename
+	$self->{'_ConfigMap'}->{$data->{'configNamespace'}} = $p{'File'};
+	
+	#load any child configs
+	if (($self->{'LoadChildren'}) && exists($data->{'children'})){
+		foreach (@{$data->{'children'}}){
+			$self->LoadConfig(
+				File	=> $_,
+				Parent	=> $data->{'configNamespace'}
+			) || do {
+				$self->{'errstr'} = "LoadConfig: failed to load child config ($_) for parent ($data->{'configNamespace'}) $self->{'errstr'}";
+				return (undef);
+			};
+		}
+	}
+	
+	#'tis all good
+	return (1);
 }
 
 
 ## WriteConfig ####################################
 # store values under a given namespace to a file.
 sub WriteConfig {
-   #local vars
-    my ($self, %p) = @_;
-   #sanity chacks
-    unless (exists($self->{$p{'configNamespace'}})){
-        $self->{'errstr'} = "WriteConfig: specified configNamespace does not exist in this object!";
-        return (undef);
-    }
-   #dump given namespace down to xml
-    require Data::DumpXML::dump_xml;
-    my $xml_data = Data::DumpXML::dump_xml($self->{$p{'configNamespace'}});
-   #if no 'File' argument is given, attempt to determine the file from which this configNamespace
-   #originated and use that
-    unless (exists($p{'File'})){ $p{'File'} = $self->{'_ConfigMap'}->{$p{'configNamespace'}}; }
-   #is there an alt location?
-    if ($p{AltLoc}){
-        $p{File} = "$p{AltLoc}/$p{File}";
-    }else{
-        $p{File} = "$self->{v_root}/$self->{config_loc}/$p{File}";
-    }
-   #open and dump
-    open (OUTFILE, ">$p{File}") || do {
-        $self->{'errstr'} = "WriteConfig: failed to open $p{File} in write mode";
-        return (undef);
-    };
-    print OUTFILE $xml_data, "\n";
-    close OUTFILE;
-    return (1);
-}
-
-## LoadUserCfg ####################################
-sub LoadUserCfg {
-    #local vars
-     my $self = shift();
-     my %p = @_;
-    #required option
-     unless (exists $p{configNamespace}){
-         $self->{errstr} = "configNamespace is a required option to LoadUserCfg";
-         return (undef);
-     }
-    #the specified configNamespace is loaded, right?
-     unless (exists $self->{$p{configNamespace}}){
-         $self->{errstr} = "specified configNamespace is not loaded!";
-         return (undef);
-     }
-    #a shortcut!
-     my $data = $self->{$p{configNamespace}};
-    #if defined (and ok) load userconfig
-     if (exists($data->{'User Config'})){
-        #do we need to copy to user's home?
-         if (! -e "$ENV{HOME}/$data->{'User Config'}->{FileName}"){
-            #we need a skeleton also!
-             unless (-e "$data->{FrameworkDir}/$data->{'User Config'}->{'Skeleton File'}"){
-                 $self->{errstr} = "User's config and skeleton file do not exist!";
-                 return (undef);
-             }
-            #do the copy
-             require File::Copy;
-             unless (File::Copy::copy (
-                 "$data->{FrameworkDir}/$data->{'User Config'}->{'Skeleton File'}",
-                 "$ENV{HOME}/$data->{'User Config'}->{FileName}"
-             )){
-                 $self->{errstr} = "can't copy skeleton to user's home! $!";
-                 return (undef);
-             }
-         }
-        #well if we got here, then we're go to load it!
-         unless ($self->LoadConfig(
-             AltLoc			=> $ENV{HOME},
-             File			=> $data->{'User Config'}->{FileName},
-             configNamespace	=> $p{configNamespace}
-         )){
-             $self->{errstr} = "Object Initialization (userconfig): $self->{errstr}";
-             return (undef);
-         }
-        #it MUST be all-good!
-         return (1);
-     }else{
-        #hmm, throw an error
-         $self->{errstr} = "the specified configNamespace does not define a User Config!";
-         return (undef);
-     }
+	my ($self, %p) = @_;
+	
+	#configNamespace is a required option
+	exists($p{'configNamespace'}) || do {
+		$self->{'errstr'} = "WriteConfig: 'configNamespace' is a required option.";
+		return (undef);
+	};
+	
+	#dump given namespace down to xml
+	require Data::DumpXML::dump_xml;
+	my $xml_data = Data::DumpXML::dump_xml($self->{$p{'configNamespace'}});
+	
+	#if 'File' is specified, use that, otherwise use the file in _ConfigMap
+	exists($p{'File'}) || do {
+		exists($self->{'_ConfigMap'}->{$p{'configNamespace'}}) || do {
+			$self->{'errstr'} = "WriteConfig: 'File' is not specified, and I can't find a file in _ConfigMap! ";
+			$self->{'errstr'}.= "I don't know where to write this data!";
+			return (undef);
+		};
+		$p{'File'} = $self->{'_ConfigMap'}->{$p{'configNamespace'}};
+	};
+	
+	#since (presumably) anything in _ConfigMap is garanteed to exist, then we can use
+	#the same file precedence matching as LoadConfig!!! 'cept this time we're checking
+	#for writeability.
+	#find the file
+	(-w $p{'File'}) || do {
+		#if it exists under config_loc use that
+		if (-w "$self->{'config_loc'}/$p{'File'}"){
+			$p{'File'} = "$self->{'config_loc'}/$p{'File'}";
+		#otherwise if it exists under the FrameworkDir, use that
+		}elsif (-w "$self->{'FrameworkDir'}/$p{'File'}"){
+			$p{'File'} = "$self->{'FrameworkDir'}/$p{'File'}";
+		#other-otherwise if it exists in the user's home directory, use that
+		}elsif (-w "$ENV{'HOME'}/$p{'File'}"){
+			$p{'File'} = "$ENV{'HOME'}/$p{'File'}";
+		#not having a file at all isn't a problem here, it might be new!
+		}
+	};
+	
+	#ok check if the file is binary, if it is, or if the 'Encrypt' option is set
+	#then we need to encrypt it before we write it.
+	if ((-B $p{'File'}) || ($p{'Encrypt'})){
+		#use global key and crypt unless otherwise specified
+		foreach ('Key','Crypt'){ $p{$_} = $self->{$_} unless exists($p{$_}); }
+		#get the cipher
+		require Crypt::CBC;
+		my $cipher = new Crypt::CBC($p{'Key'},$p{'Crypt'});
+		$xml_data = $cipher->encrypt($xml_data);
+	}
+	
+	#dump it down to the file
+	open (OUTFILE, ">$p{'File'}") || do {
+		$self->{'errstr'} = "WriteConfig: can't open file ($p{'File'}) for writing $!";
+		return (undef);
+	};
+	print OUTFILE $xml_data ;
+	close (OUTFILE);
+	return (1);
 }
 
 
 ## AlertAdmin #####################################
- ##todo -- add support for writing log info via Net::Syslog
 sub AlertAdmin {
-   #local vars
-    my ($self, %p) = @_;
-    my ($to) = ();
-   #required option
-    unless (exists ($p{Message})){
-        $p{Message} = "[No Message Sent] / [System Error Message]: $!";
-    }
-   #if we're in debug mode, don't send email, don't log to file
-    if ($self->{Debug}){
-        if ($p{Die}){ die ($p{Message}, "\n"); } else { print $p{Message}, "\n"; }
-        return (1);
-    }
-   #if additional reciepients are specified
-    if (exists($p{To})){
-        if (ref ($p{To}) eq "ARRAY"){
-            push (@{$p{To}}, $self->{admin});
-            $to = join (', ', @{$p{To}});
-        }else{
-            $to = "$self->{admin}, $p{To}";
-        }
-    }else{
-        $to = $self->{admin};
-    }
-   #open sendmail pipe
-    open (SENDMAIL, "|$self->{sendmail} -oi -t -fnobody") || do {
-        #can't open sendmail! send message to v_root/var/last_resort.log
-         $p{Message}=~s/\"/\\\"/g;
-         my $time = time();
-         system ("echo \"[$time]: CAN'T OPEN SENDMAIL! ($!) -> $p{Message}\" >> $self->{v_root}/var/log/last_resort.log");
-         $self->{errstr} = "[$time]: CAN'T OPEN SENDMAIL! ($!) -> $p{Message}";
-         return (undef);
-    };
-   #message content
-    print SENDMAIL "From: nobody ($self->{program})\n";
-    print SENDMAIL "To: $to\n";
-    print SENDMAIL "Subject: Auto-generated Alert from: $self->{program}\n";
-    print SENDMAIL "Reply-To: nobody\n";
+	my ($self, %p) = @_;
+	
+	#Message is requred
+	exists($p{'Message'}) || do {
+		$self->{'errstr'} = "AlertAdmin: 'Message' is a required option";
+		return (undef);
+	};
+	
+	#fix stringy 'To''s to work with arrayified ones
+	if ((exists($p{'To'})) && (ref($p{'To'}) ne "ARRAY")){
+		my $temp = $p{'To'};
+		delete($p{'To'});
+		push(@{$p{'To'}}, $temp);
+	};
+	
+	#if we're in debug mode, just print the message to stdout and be done
+	if ($self->{'debug'}){
+		print $p{'Message'}, "\n";
+		return (1);
+	}
+	
+	#open sendmail pipe
+	open (SENDMAIL, "|$self->{sendmail} -oi -t -fnobody") || do {
+		#can't open sendmail, spew message to v_root/var/last_resort.log
+		open (LAST_RESORT, ">>$self->{'v_root'}/var/log/last_resort.log") || do {
+			print "AlertAdmin: can't open sendmail or last_resort.log $p{'Message'}\n";
+			return (undef);
+		};
+		my $time = time();
+		print LAST_RESORT "[$time]: can't open sendmail! $p{'Message'}\n";
+		close (LAST_RESORT);
+	};
+	
+	#give sendmail the message
+	print SENDMAIL "From: nobody ($self->{'program'})\n";
+	print SENDMAIL "To: ", join (', ', @{$p{'To'}}), "\n";
+	print SENDMAIL "Subject: Auto-generated Alert from: $self->{program}\n";
+	print SENDMAIL "Reply-To: nobody\n";
     print SENDMAIL "Errors-To: nobody\n\n";
     print SENDMAIL "\n\n";
     print SENDMAIL $p{Message}, "\n";
+    
+    #spew the user's environment if specified
     if ($p{ENV}){
-        print SENDMAIL "\n[ENV] --------------------------------------------\n";
+		print SENDMAIL "\n[ENV] --------------------------------------------\n";
         foreach (keys %ENV){ print SENDMAIL "[$_]: $ENV{$_}\n"; }
     }
+    
+    #send the message 
     close (SENDMAIL);
-   #log to file 
-    if ($p{Log}){ $self->Log(%p); }
-    if ($p{Die}){ die ($p{Message}, "\n"); }
+    
+    #if specified, log the message as well
+    if ($p{'Log'}){ $self->Log(%p); }
+    
+    #if specified, die as well
+    if ($p{'Die'}){ die ($p{'Message'}, "\n"); }
+    
+    #shiver me timbers, maytee
     return (1);
 }
 
 
 ## Log ############################################
+## NOTE: need to build syslog support into this
+## eventually
 sub Log {
-    my ($self, %p) = @_;
-   #required options
-    unless ((exists($p{Message})) && (exists($p{Log}))){
-        $self->{errstr} = "Message and Log are required options";
-        return (undef);
-    }
-   #make sure the logfile exists
-    unless (-e "$self->{v_root}/$p{Log}"){
-         $self->{errstr} = "specified logfile does not exist!";
-         return(undef);
-    }
-   #do the dam thang ##ghetto until we get the syslog thing worked out
-    my $time = time();
-    if ($self->{'AsymetricLogging'}){ $p{Log} .= " &"; }
-    system("echo \"[$time]: $p{Message}\" >> $self->{v_root}/$p{Log}");
-    if ($p{Echo}){ carp $p{Message}; }
-    if ($p{Die}){ die ($p{Message}, "\n"); }
-    return(1);
+	my ($self, %p);
+	
+	#Message is required
+	exists($p{'Message'}) || do {
+		$self->{'errstr'} = "Log: 'Message' is a required option";
+		return (undef);
+	};
+	
+	#Log is required
+	exists($p{'Log'}) || do {
+		$self->{'errstr'} = "Log: 'Log' is a required option (path to and name of logfile)";
+		return (undef);
+	};
+	
+	#append it to the log file
+	open (LOG, ">>$self->{'v_root'}/$p{'Log'}") || do {
+		$errstr = "Log: can't open log file ($p{'Log'}: $!\n";
+		return (undef);
+	};
+	my $time = time();
+	print LOG "[$time]: $p{'Message'}\n";
+	close (LOG);
+
+	#if specified, warn the message to stdout
+	if ($p{Echo}){ carp $p{'Message'}; }
+
+	#if specified, die as well
+    if ($p{Die}){ die ($p{'Message'}, "\n"); }
+
+	#shenannigans
+	return (1);
+
 }
