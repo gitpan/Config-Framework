@@ -1,5 +1,8 @@
 Revision history for Perl extension Config::Framework.
 
+2.1		Tue Sep 30 12:05:28 EDT 2003
+		fixed bug with exported methods in Data::DumpXML.
+
 2.0		Mon Sep 29 14:12:28 EDT 2003
 		Major Revision. Updated / Completed Documentation. Still needs comprehensive Test Suite.
 		WARNING: May break dependancies on older versions of Config::Framework.

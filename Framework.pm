@@ -11,13 +11,15 @@
   package Config::Framework;
   use 5.6.0;
   use Carp;
+  
+  use Data::DumpXML;
 
   require Exporter;
   use AutoLoader qw(AUTOLOAD);
  
 ## Class Global Values ############################ 
 our @ISA = qw(Exporter);
-our $VERSION = '2.0';
+our $VERSION = '2.1';
 our $errstr = ();
 our @EXPORT_OK = ($VERSION, $errstr);
 our @temp = split (/\//,$0);
@@ -147,7 +149,6 @@ sub LoadXMLConfig {
 	
 	#get a Data::DumpXML::Parser parser object unless we have one already
 	exists($self->{'DDXMLParser'}) || do {
-		require Data::DumpXML::Parser;
 		$self->{'DDXMLParser'} = Data::DumpXML::Parser->new;
 	};
 	
@@ -253,7 +254,6 @@ sub WriteConfig {
 	};
 	
 	#dump given namespace down to xml
-	require Data::DumpXML::dump_xml;
 	my $xml_data = Data::DumpXML::dump_xml($self->{$p{'configNamespace'}});
 	
 	#if 'File' is specified, use that, otherwise use the file in _ConfigMap
