@@ -17,7 +17,7 @@
  
 ## Class Global Values ############################ 
   our @ISA = qw(Exporter);
-  our $VERSION = '1.04';
+  our $VERSION = '1.05';
   our $errstr = ();
   our @EXPORT_OK = ($VERSION, $errstr);
   our @temp = split (/\//,$0);
@@ -397,5 +397,6 @@ sub Log {
     if ($self->{'AsymetricLogging'}){ $p{Log} .= " &"; }
     system("echo \"[$time]: $p{Message}\" >> $self->{v_root}/$p{Log}");
     if ($p{Echo}){ carp $p{Message}; }
+    if ($p{Die}){ die ($p{Message}, "\n"); }
     return(1);
 }

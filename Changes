@@ -45,3 +45,5 @@ Changed namespace to Config::Framework.
 1.04	Tue, Mar 18 17:30:00 2003
 		last_resort.log is now written to v_root/var/log, also writes reason sendmail could
 		not be opened
+1.05	Tue, 4/15/03 16:02:16
+		Log method will now die if given the 'Die' option (just liek AlertAdmin)
