@@ -1,0 +1,486 @@
+=head1	Config::Framework
+
+This module provides global configuration data to perl programs which live under a 
+standard distribution. For more information on the standard, perldoc or man 'manifesto'.
+
+In addition to providing global configuration data, this module also provides facilities for
+reading and writing XML files using Data::DumpXML, decrypting and encrypting data via Crypt::CBC,
+Logging, and sending alerts to a specified email address.
+
+Config::Framework is built around the ability to dump and restore arbitrary perl data structures to and
+from files. This concept is central to what Config::Framework does, which is essentially, to manage
+configuration data. There are several perl modules out there which can handle the dumping and restoring
+of data structures, mainly Data::Storable, which is a fine module, using binary files. However,
+in the general spirit of keeping things as simple, and open as possible, I decided to go with
+Data::DumpXML, which uses an XML DTD to dump and restore the data. This is good because in a pinch
+a human can look at the dump'd file and figure out what's going on. 
+
+So, we let Data::DumpXML worry about the file format, and we keep all of our data in a universally
+defined data structure (see "Configuration Data Structure" below). Using this module, you can load 
+that data into the Config::Framework object. Confused? Ok lemme break it down a bit more. The Config::Framework
+object is the thingy you create using the New method (see below). Any perl object is really just a
+blessed reference, meaning that it serves a dual purpose: you can call methods against it, and it
+also points to some other perl thing, such as a string or an array, or a bit of code, etc. In this
+case it points to a hash reference. So once you have created a Config::Framework object, you can both use
+the data stored in the hash it points to, and also call methods against the object. So now you can
+see what a handy thing this is! Using this module you not only have a place to store any configuration
+data (or actually any data structure at all), as well as an object which you can call a bunch of handy
+methods on.
+
+So there's still a big sticky-wicket. Once you've got this magic object, and you've loaded your data
+into it, how do you find it? What if you've got 20 different config files you need to load? How do you
+keep things organized? Answer: 'configNamespace'. 
+
+"configNamespace" is just a fancy name I made up for a hash key. Sounds cool, huh? Well really it's a
+bit more than that, but not much more. Each file that you load into the object must define an element
+in it's root hash (see 'Configuration Data Structure' below) called 'configNamespace'. This tells 
+Config::Framework where to load the data under it's main hash reference. Say that I had config file that
+I wanted to load that defined configNamespace to be "myProgram". If $Config was my Config::Framework object,
+I could find the data I just loaded under 
+ $Config->{'myProgram'}. 
+Pretty much anything goes when it
+comes to what to use for your configNamespcace, there is however one reserved word. YOU CANNOT USE
+'Secure', WHICH IS RESERVED FOR DATA FROM passwds.xml.
+
+So, what if I try to load two files which have the same 'configNamespace'? Well pretty much what would
+happen is that the second file would overwrite the first, unless you defined 'protectNamespace' to be
+a nonzero value in the first file. In that case, Config::Framework would throw an error when you try to
+load the second file.
+
+Ok so one other thing about configNamespaces. They can be cascading. That is to say, you may have
+several levels of them. This especially happens in config files which define a 'User Config'. 
+So, a config can define a second config to load into a configNamespace underneath the existing one.
+It sounds confusing, but isn't.
+
+
+=head1	Configuration Data Structure
+
+This is the data structure that Config::Framework expects to see in configfiles that you attempt to load
+into the object. Note that Config::Framework can load ANY perl data structre dumped using Data::DumpXML,
+however, it can't store the data in it's object unless you use this format. The data structure should
+be a hash at it's root ... after that it's pretty much as arbitrary as you want to make it. The only
+thing that's REALLY REQUIRED is this:
+
+ $hash{configNamespace} = "whatever you want it to be";
+
+Beyond that, practically speaking, you're on your own. However, there are some guidelines which you 
+should probably adhere to. Following is a datastructure that I reccomend that you use. Obviously, 
+everything in this structure does not apply to every program out there, all I ask is that if you need
+to store any of this data in a config, that you use this format ... that keeps everyone sane.
+
+=head2 The Format
+
+ %DATA = (
+  ## Program Identification #######################
+    #name of program (not filename, example: "Skelator" not "skelator.pl")
+     'Program Name'			=> $program_name,
+    #most recent version of this program
+     'Program Version'		=> $version,
+    #each key in this hash is the name of something which is required
+    #for this program to run. The value of the key would be a brief
+    #description of that thing. This might be a list of modules, or a list
+    #of configuration files. This is meant to be general purpose as possible.
+    #(following are example entries).
+     'Dependencies'			=> {
+     	'DBD\::Sybase'	=> "perl module for talking to Sybase databases",
+     	'/csserve0/loc4/secsup/Prod/config/my_file.txt'	=> "a random file I need"
+     },
+     
+  ## Authors ######################################
+    #name of the lead developer for this project
+     'Primary Author'		=> $lead_developer,
+    #the email of the lead developer so we can bug him when things go wrong
+     'Primary Author Email'	=> $lead_developer_email,
+    #other people might have also worked on this project, if so this is an
+    #array of them
+     'Developers'			=> [
+         "array",
+         "of",
+         "other",
+         "developers",
+     ],
+     
+  ## Config Meta Data #############################
+    #You oughta know what this is by now ... ;-)
+     'configNamespace'		=> $configNamespace,
+    #throw an error if someone tries to overwrite your 'configNamespace' in 
+    #the global config object. (1 throws error)
+     'protectNamespace'		=> 1|0,
+    #the current version of this config file
+     'Config Version'			=> $config_version,
+    #some programs define a user-specific configuration file
+    #which is stashed in the user's home directory.
+     'User Config'				=> {
+        #filename to look for in user's home directory
+         'FileName'			=> $file_name,
+        #if 'FileName' isn't found load this skeleton file and copy it to
+        #the user's home directory
+         'Skeleton File'		=> $skeleton_file_name
+        #if the version of the user's config is less than this number, the 
+        #file format is updated from the 'Skeleton File'
+         'Require Version'	=> $version_to_require
+     },
+     
+  ## Documentation ################################
+     'Documentation'		=> {
+        #Program (executable) lives in this directory
+         'Path'				=> $path_to_program,
+        #The name of the executable file under 'Path'
+         'ExecFileName'	=> $filename,
+        #a brief synopsis of what the program does
+         'Synopsis'		=> $brief_synopsis,
+        #a string containing a description of commandline syntax
+         'Syntax'		=> $syntax,
+        #any additional information that might be useful
+         'Aux Info'		=> $more_optional_info
+     },
+     
+  ## Program Specific Keys ########################
+    #would go here ...
+ );
+ 
+ 
+ 
+ 
+=head1	Global Configuration Data
+
+Annother nice thing that Config::Framework does for you is to serve as a place where global configuration
+data (i.e. not read from a file) is stored. Durring the Makefile.PL process, you are asked a series
+of questions, where you set global configuration data. This data is available at the root level of any
+Config::Framework object, without loading any files. At the moment, if you want to add additional global 
+config items you've got to edit the file manually and modify the %GLOB_CONFIG hash at the top of
+the module. keep in mind that you can override any of these by sending alternate values as the argument
+to the equivalent option to New. Here's a brief rundown on what's in there by default:
+
+=over
+
+=item 'program'
+
+This is the name of the currently running process. This is pretty much $0, excpet we strip the path
+off, and just give the filename.
+
+=item 'v_root'
+
+"Virtual Root". To get more familiar with this concept, you should read the SecsupManifesto
+(perldoc or man 'manifesto'). This is directory under which everything lives. If you are using the
+standards in the manifesto (you are, aren't you?) then this will be your 'prod' directory. USE THIS.
+IT MEANS NEVER HAVING A HARD CODED PATH IN ANY OF YOUR PROGRAMS.
+
+=item 'config_loc'
+
+"Configuration Location" This is the directory under 'v_root' which contains all of your configuration
+files. When you load a config file using LoadConfig or LoadXMLConfig, we presume that the file or 
+path to the file exists under this location. It's good to keep things organized! ;-)
+
+=item 'SYBASE"
+
+The path to the sybase client libraries. If defined, this variable is exported to the process' shell 
+when New is called.
+
+=item 'ORACLE_HOME'
+
+The path to oracle client libraries, also exported to the process' shell upon object creation if
+defined.
+
+=item 'LD_LIBRARY_PARH'
+
+If this is defined, then this LD_LIBRARY_PATH will be exported to the process' shell at object creation.
+If you are using the secsup manifesto this will be the 'lib' directory under 'v_root'.
+
+=item 'sendmail'
+
+This is the path to the sendmail binary. We need this for sending alerts to people via AlertAdmin.
+
+=item 'admin'
+
+The email address to send mail to when something goes drastically wrong ... also the default email
+address to send alerts to via AlertAdmin.
+
+=item 'EnvExportList'
+
+This is an array containing the default set of values to export to the process' shell (if defined).
+By default, this is "SYBASE", "ORACLE_HOME", "ORACLE_SID", "ARTCPPORT", and "LD_LIBRARY_PATH". You
+and add to this list using the EnvExportList option to New. You can prevent any values being exported
+at all by using the EnvExportOverride option to New.
+
+=item 'Crypt'
+
+Use this Crypt::CBC compliant enctrpyion module to decrypt data in passwds.xml. Use it by default
+for any other encrypted files also.
+
+=item 'Key'
+
+Use this pasphrase to decrypt data in passwds.xml. Use it by default for ant other encrypterd files
+as well.
+
+=back
+
+
+
+
+=head1 To Do
+
+ Write Test Programs for 'make test'
+ 
+ Modify Log to use Net::Syslog.
+ 
+ Add hook so that we can specify an external subroutine to interpolate existing data
+ from user configs which have an out of date version and which need to be updated.
+
+
+
+=head1	Dependencies
+
+=over
+
+=item Crypt::CBC				Version 2.02+
+
+=item Data::DumpXML::Parser		Version 1.01+
+
+=item File::Copy				Version 2.03+
+
+=back
+
+
+
+=head1	Methods
+
+=head1	New (contructor)
+
+=head2 Notes
+
+This is the object constructor. Upon failure, the method will return the undef value, and an error message will be
+written to $Config::Framework::errstr.
+
+=head2 Synopsis
+
+ $Object = Config::Framework::New([options]) || die $Config::Framework::errstr, "\n";
+
+=head2 Options
+
+=over
+
+=item EnvExportList
+
+A list of other options you wish to export to the process' shell environment. This 
+should be an array reference to a list of option names. This isn't as straight forward as it 
+sounds, here's an example:
+
+ $Object = Config::Framework::New(
+ 	EnvExportList	=> ["Option1", "Option2"],
+ 	Option1			=> "blah",
+ 	Option2			=> "moreBlah"
+ );
+
+In this case the variables $Option1 and $Option2 would be set to their respective values in the
+process' shell.
+
+There is a default list of variables and values to export at the top of the module, so if you need
+something permanent you can edit the module manually, if you want. Someday perhaps I'll build this
+into the Makefile.PL.
+
+=item EnvExportOverride
+
+If this option is set to a nonzero value, then no values will be exported to the process' shell
+environment.
+
+=item AutoLoadUserCfg
+
+If this option is set to a nonzero value and any of the files loaded via the Files option
+defines a user config, then the user's config is loaded from the appropriate location.
+(Default value for this option is 1).
+
+=item GetSecure
+
+If this option is set to a nonzero value, passwds.xml is decrypted and loaded into the 
+configNamespace 'Secure'.
+
+=item File
+
+This is a file or list of files containing configuration data (in the Data::DumpXML DTD), which 
+should be loaded at object creation. If there is only one file to be loaded, the argument should
+be a string containing the file name uneder v_root/config_loc to load. If there is more than one
+file to load, the argument should be a reference to an array containing the list of filenames.
+Each file to be loaded MUST DEFINE configNamespace.
+
+=item AsymetricLogging
+
+if set to a nonzero value, this option will background all of the logging processes with the 
+shell '&'. This is good if you want to do lots of fast, repetative logging, but don't want to
+need to wait on disk updates. Of course the downside to this is that you can't garantee that 
+your logfile will be in strict chronological order.
+
+=back
+
+
+
+
+=head1 LoadConfig
+
+=head2 Notes
+
+Load the specified file into the object under the configNamespace defined in the file. If the given
+file does not define configNamespace, then it may be loaded under an optionally supplied
+configNamespace option. The specified file must be in the Data::DumpXML DTD.
+
+=head2 Synopsis
+
+ $Object->LoadConfig([options]) || die $Object->{errstr}, "\n";
+
+=head2 Options
+
+=over
+
+=item File (required)
+
+This is the filename of the file to load under v_root/config_loc.
+
+=item configNamespace
+
+If the specified file does not define it's own configNamespace, the file will be loaded under this
+alternate configNamespace, if supplied.
+
+=back
+
+
+
+
+=head1 LoadXMLConfig
+
+=head2 Notes
+
+This routine loads an XML file in the Data::DumpXML DTD, and returns the data structure therein.
+All loading of Data::DumpXML DTD documents is done through this routine internally. It's also hanndy
+as an external routine.
+
+=head2 Synopsis
+
+ $data = $Object->LoadXMLConfig([options]) || die $Object->{errstr}, "\n";
+
+=head2 Options
+
+=over
+
+=item File (required)
+
+This is the filename of the file to load under v_root/config_loc. If the file is binary, we presume
+that it's encrypted, and attempt to decrypt it with the given Crypt and Key, if given. If they are
+not given, we attempt to use the default Crypt and Key defined for passwds.xml
+
+=item Key
+
+If the given File is binary, we will attempt to use this passphrase to decrypt the data.
+
+=item Crypt
+
+If the given file is binary, attempt to use this Crypt::CBC compliant encryption module to decrypt
+the data.
+
+=item AltLoc
+
+If you want to load a config file which dosen't exist under v_root/config_loc, you can define an
+aleternate path here.
+
+=back
+
+
+
+=head1 LoadUserCfg
+
+=head2 Notes
+
+Load the user's config for the given configNamespace. If the user's config does not exist, and the given
+configNamespace defines a skeleton file, copy it to the user's home directory, and then load it.
+This presumes that the given configNamspace defines a userConfig. The user's config is loaded into 
+specified child configNamespace under the given configNamespace.
+
+=head2 Synopsis
+
+ $Object->LoadUserCfg([options]) || die $Object->{errstr}, "\n";
+
+=head2 Options
+
+=over
+
+=item configNamespace
+
+Examine this already loaded namespace for a defined userConfig. If one is found, load it.
+
+=back
+
+
+
+=head1 AlertAdmin
+
+=head2 Notes
+
+Send an alert to the address specified in 'admin', and to any additional specified addresses.
+This is the location where exceptions are handled for host programs. If the Debug option is set
+on the object, no email will be sent, but the message will be printed to stdout.
+
+=head2 Synopsis
+
+ $Object->AlertAdmin([options]) || die $Object->{errstr}, "\n";
+
+=head2 Options
+
+=over
+
+=item Message (required)
+
+A string containing the text of the message to send.
+
+=item To
+
+An optional list of email addresses to copy the message to. This should be an array reference.
+You may find it helpfull to build the array reference inline with the function call like so:
+To => ["address1", "address2", "address3"]
+Don't forget to escape @'s in your email addresses!
+
+=item Die
+
+If this option is set to a nonzero value, we call die with the given Message after sending the email
+and logging if defined.
+
+=item Log
+
+The name of a logfile to log the Message to.
+
+=back
+
+
+
+=head1 Log
+
+=head2 Notes
+
+Log the given message to given logfile. All logging for applications should occur through this 
+interface. At this time, the logging occurs through a primitive system ("echo $message >> $file"),
+so keep that in mind if you're going to use Message's with quotes in 'em. This will definately be 
+modified in the near future to use a more advanced logging facility, probably Net::Syslog.
+
+=head2 Options
+
+=over
+
+=item Message (required)
+
+A string containing the text of the message to log
+
+=item Log (required)
+
+The path and filename of the file to log the message to.
+
+=back
+
+
+=head1 Author: 
+
+ Andrew N. Hicox	<ahicox@uu.net>
+ WorldCom Customer Security Development Group
+
+=head1 Author: 
+
+ Andrew N. Hicox	<ahicox@uu.net>
+ WorldCom Customer Security Development Group
+

@@ -1,0 +1,39 @@
+Revision history for Perl extension SecsupConfig.
+
+2.0		Wed Apr 17 16:50:56 2002
+		original revision to use AutoSplit
+2.2.1	Fri Apr 25 11:27:00 2002
+		multiple files can now be loaded in New
+2.2.3	Wed May 22 14:47:00 2002
+		fixed typo in New
+2.2.4	Fri June 13 12:29:34 2002
+		added Debug option ... only thing it does is prevent mail from being sent out
+		of AlertAdmin. Maybe more later. Right now, it's just convinient.
+2.2.6	Wed, 6/26/02 11:19:00
+		added logging to AlertAdmin
+2.2.7	Thu, 6/27/02 13:07:12
+		added Log as separate method -->this is where Syslog stuff will go eventually
+2.2.8	Wed, 7/3/02 12:27:03
+		Added complete POD documentation. No code changes.
+2.2.9	Thu, 8/15/02 12:59:32
+		Added Carp to Log function, if Echo is defined. This is a nice way of echoing
+		log stuff to std out ... say if you want to have easy debugging output.
+2.3.0	Mon, 8/26/02 10:53:50
+		Fixed location of AutoLoadUserCfg under $obj, not $data in New
+		Fixed logical flow error in LoadUserCfg which caused no config to load unless it was copied.
+		Fixed syntax error in LoadUserCfg: $obj => $self ;-)
+		Oops! forgot to specify AltLoc in LoadUserCfg ... fixed that too.
+2.3.1	Thu, 10/10/02 12:36:22
+		fixed logging error in AlertAdmin. File option is depricated.
+		send log file on Log option now.
+2.3.2	Fri, 10/11/02 10:02:42
+		added 'AsymetricLogging' option to new. If set to a nonzero value, this option will 
+		background all of the logging processes with the shell '&'. This is good if you want to
+		do lots of fast, repetative logging, but don't want to need to wait on disk updates.
+		of course the downside to this is that you can't garantee that your logfile will be in 
+		strict chronological order.
+
+Changed namespace to Config::Framework.
+
+1.0		Mon Oct 21 11:13:14 2002
+		initial version for release to CPAN under Config::Framework namespace.
